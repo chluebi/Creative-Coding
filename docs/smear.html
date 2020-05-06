@@ -5,7 +5,7 @@
     <canvas id="canvas" width="800" height="600" style="border:1px solid #101010; background:#000000;">
         Dein Browser unterstützt den HTML5 Canvas-Tag nicht (erscheint als Alternative auf dem Bildschirm</canvas>
     <script>
-        
+    	
         let canvas = document.getElementById("canvas");
         let ctx = canvas.getContext("2d");     
         let shapeColour = "black";
@@ -14,7 +14,7 @@
 
         let circles = [];
         
-        
+      	
         for (i = 1; i <= amount; i = i + 1) {
             let x = Math.floor((Math.random() * 800) + 1);
             let y = Math.floor((Math.random() * 600) + 1);
@@ -28,14 +28,18 @@
 
             // Es wird erst aus der Schleife gegangen wenn entweder
             // A: Ein Kreis platziert werden kann, ohne mit einem anderen Kreis zu überlappen
+            // NEU: Kreise dürfen jetzt auch ineinander solange sie sich nicht schneiden
+            // NEU: Kreise dürfen überlappen, aber nur ein bisschen (Faktor 1 lässt keine Überlappung zu, Faktor 0.7 lässte ein bisschen Überlappung zu)
             // oder B: Es 100 mal versucht wurde
-            while (minDistance < 0 && i < 100) {
+            while (!(minDistance > r*0.7 || i > 100)) {
                 x = Math.floor((Math.random() * 800) + 1);
                 y = Math.floor((Math.random() * 600) + 1);
                 distances = all_distances(x, y, r, circles);
                 minDistance =  Math.min.apply(null, distances);
                 i ++;
             }
+
+            r = r*999/1000
 
             // Wenn es 29 oder mehr Versuche gegeben hat, ist klar dass das Platzieren eines Kreises eher schwer ist, also verringern wir den Radius
             if (i > 99) {
@@ -70,8 +74,8 @@
             distances = []
             for (let circle of circles) {
                 let d = distance(x, y, circle.x, circle.y);
-                d -= r + circle.r;
-                distances.push(d);
+                d -= circle.r;
+                distances.push(Math.abs(d));
             }
             return distances
         }
