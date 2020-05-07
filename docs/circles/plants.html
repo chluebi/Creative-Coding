@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+
+<body>
+    <canvas id="canvas" width="800" height="600" style="border:1px solid #101010; background:#000000;">
+        Dein Browser unterstützt den HTML5 Canvas-Tag nicht (erscheint als Alternative auf dem Bildschirm</canvas>
+    <script>
+    	
+        let canvas = document.getElementById("canvas");
+        let ctx = canvas.getContext("2d");     
+        let shapeColour = "green";
+        let amount = 1000;
+
+        let circles = [];
+
+
+        r = 5;
+        let x = 400;
+        let y = 590;
+
+        let rootx = x;
+        let rooty = y;
+        let rootr = r;
+
+        // Starting circle
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, 2 * Math.PI);
+        ctx.strokeStyle = 'red';
+        ctx.stroke();
+        circles.push({'x':x, 'y':y, 'r':r, 'a':0});
+
+        let failed = 0;
+
+        let lastDistance = 0;
+
+        for (i = 1; i <= amount; i = i + 1) {
+            //hier wird das Bildelement gezeichnet und mit der Farbe gefüllt
+            let friend = random_last_circle(circles, 5 + lastDistance/20);
+            console.log(circles);
+            console.log(friend);
+            let angle = friend.a // Math.random() * 2 * Math.PI
+            angle = lerp(angle, -Math.PI/2, 0.05)
+            angle += (Math.random()-0.5)/2*(1+(500-lastDistance)/300)
+
+            let personalR = 5;
+
+
+            if (failed > 10 || Math.random()*1000 < 10) {
+                x = rootx;
+                y = rooty;
+            }
+            else {
+                x = friend.x;
+                y = friend.y;
+                x += Math.cos(angle) * (friend.r + personalR)
+                y += Math.sin(angle) * (friend.r + personalR)
+            }
+
+            
+
+            if (x > 800 || x < 0 || y > 600 || y < 0) {
+                failed += 1;
+                i -= 1;
+                continue;
+            }
+            else {
+                failed = 0;
+            }
+
+            ctx.beginPath();
+            ctx.arc(x, y, personalR, 0, 2 * Math.PI);
+
+            if (Math.random()*1000 < (1050 - lastDistance/5)) {
+                ctx.strokeStyle = 'green';
+                ctx.stroke();
+            }
+            else {
+                ctx.fillStyle = 'red';
+                ctx.fill();
+            }
+    
+
+            lastDistance = distance(rootx, rooty, x, y);
+
+            // Speichere den aktuellen Kreis ab
+            circles.push({'x':x, 'y':y, 'r':personalR, 'a':angle});
+        }
+
+        function random_last_circle(circles, elements) {
+            let amount = Math.min(elements, circles.length)
+            let pos = Math.floor((Math.random() * amount) + (circles.length - amount));
+            return circles[pos];
+        }
+
+        function distance(x1, y1, x2, y2) {
+            // Pythagoras
+            return Math.sqrt(((x2-x1)**2 + (y2-y1)**2))
+        }
+
+        function all_distances(x, y, r, circles) {
+            // Speichere alle Distanzen in einer Liste
+            distances = []
+            for (let circle of circles) {
+                let d = distance(x, y, circle.x, circle.y);
+                d -= circle.r;
+                distances.push(d);
+            }
+            return distances
+        }
+
+        function list_abs(list) {
+            abs = [];
+            for (let e of list) {abs.push(Math.abs(e));}
+            return abs;
+        }
+
+        function lerp(val, goal, amount) {
+            if (val < goal) {
+                if (val + amount > goal) {
+                    return goal;
+                }
+                else {
+                    return val + amount;
+                }
+            }
+            else {
+                if (val - amount < goal) {
+                    return goal;
+                }
+                else {
+                    return val - amount;
+                }
+            }
+        }
+        
+    </script>
+</body>
+
+</html>
