@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+
+<body>
+    <canvas id="canvas" width="800" height="600" style="border:1px solid #101010; background:#000000;">
+        Dein Browser unterstützt den HTML5 Canvas-Tag nicht (erscheint als Alternative auf dem Bildschirm</canvas>
+    <script>
+    	
+        let canvas = document.getElementById("canvas");
+        let ctx = canvas.getContext("2d");
+        let circles = [];
+
+        let greens = [
+            '#66ff33', // hellgrün
+            '#009933', // dunkelgrün
+            'green',
+            '#00cc66' // türkis
+        ]
+
+        let reds = [
+            '#ff6666', // pinkrot
+            'red'
+        ]
+
+        let blues = [
+            '#0099ff', // standard blue
+            '#3366cc', // dark blue
+            '#6600ff' // almost violet
+        ]
+        
+        let amount = 500;
+        
+        r = 5;
+        let x = 400;
+        let y = 590;
+
+        let rootx = x;
+        let rooty = y;
+        let rootr = r;
+
+        // Starting circle
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, 2 * Math.PI);
+        ctx.strokeStyle = 'black';
+        ctx.stroke();
+        circles.push({'x':x, 'y':y, 'r':r, 'a':0, 'h':-1});
+
+        let failed = 0;
+
+        let lastDistance = 0;
+        let personalR = 5;
+
+        for (i = 1; i <= amount; i = i + 1) {
+
+            let type = Math.floor(Math.random()*100) + 1
+
+            let friend = null;
+            let angle = 0;
+            let hierarchy = 0;
+
+            if (type < 98) {
+                hierarchy = 0;
+                friend = randomLastCircle(
+                    hierarchyCircles(circles, circles[circles.length-1].h), 1);
+                angle = friend.a // Math.random() * 2 * Math.PI
+                angle = lerp(angle, -Math.PI/2, 0.07)
+                angle += (Math.random()-0.5)/2*(1+(500-lastDistance)/300)
+                personalR = 5;
+                
+            } else {
+                friend = randomLastCircle(circles, 10);
+                console.log(friend);
+                hierarchy = friend.h + 1
+                if (hierarchy > 5) {continue;}
+                angle = friend.a
+                angle = lerp(angle, -Math.PI/2, 0.05)
+                if (Math.random() > 0.4) {
+                    angle += Math.PI/8
+                } else {
+                    angle += Math.PI/8
+                }
+                angle += (Math.random()-0.5)*(1+(500-lastDistance)/300)
+                personalR = 5 - hierarchy;
+            }
+            
+            if (failed > 10 || Math.random()*1000 < 10 + hierarchy) {
+                x = rootx;
+                y = rooty;
+            }
+            else {
+                x = friend.x;
+                y = friend.y;
+                x += Math.cos(angle) * (friend.r + personalR)
+                y += Math.sin(angle) * (friend.r + personalR)
+            }
+        
+            if (x > 800 || x < 0 || y > 600 || y < 0) {
+                failed += 1;
+                i -= 1;
+                continue;
+            }
+            else {
+                failed = 0;
+            }
+
+            ctx.beginPath();
+            ctx.arc(x, y, personalR, 0, 2 * Math.PI);
+
+            if (Math.random()*1000 < (1050 - lastDistance/5)) {
+                ctx.strokeStyle = randomElement(greens);
+                ctx.stroke();
+            }
+            else {
+                ctx.fillStyle = randomElement(reds);
+                ctx.fill();
+            }
+    
+
+            lastDistance = distance(rootx, rooty, x, y);
+
+            // Speichere den aktuellen Kreis ab
+            circles.push({'x':x, 'y':y, 'r':personalR, 'a':angle, 'h':hierarchy});
+        }
+        amount = 2000;
+        r = 10;
+ 
+        for (i = 1; i <= amount; i = i + 1) {
+            let x = Math.floor((Math.random() * 800) + 1);
+            let y = Math.floor((Math.random() * 600) + 1);
+            let distances = all_distances(x, y, r, circles);
+            // Finde die kleinste Distanz zu einem anderen Kreis
+            let minDistance = Math.min.apply(null, distances);
+
+
+            // Iterator, der bis auf 100 gehen kann, damit, falls man es 100-mal nicht geschafft hat einen Kreis zu platzieren, man auch aufhört es zu versuchen
+            let i = 0;
+
+            // Es wird erst aus der Schleife gegangen wenn entweder
+            // A: Ein Kreis platziert werden kann, ohne mit einem anderen Kreis zu überlappen
+            // NEU: Kreise dürfen jetzt auch ineinander solange sie sich nicht schneiden
+            // oder B: Es 100 mal versucht wurde
+            while (!(minDistance > r*1 || i > 100)) {
+                x = Math.floor((Math.random() * 800) + 1);
+                y = Math.floor((Math.random() * 600) + 1);
+                distances = all_distances(x, y, r, circles);
+                minDistance =  Math.min.apply(null, distances);
+                i ++;
+            }
+
+            // Wenn es 29 oder mehr Versuche gegeben hat, ist klar dass das Platzieren eines Kreises eher schwer ist, also verringern wir den Radius
+            if (i > 99) {
+                r = r*99/100;
+                if (r < 0) {break;} // Wir wollen keine Kreise mit negativem Radius platzieren, wir gehen aus der Schleife
+                else {continue;} // Wir haben keine Position gefunden einen Kreis zu platzieren, also platzieren wir auch keinen und gehen zur nächsten Iteration der Schleife
+            }
+
+            
+            //hier wird das Bildelement gezeichnet und mit der Farbe gefüllt
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, 2 * Math.PI);
+            ctx.strokeStyle = randomElement(blues);
+            ctx.stroke();
+            
+            //ctx.fillStyle = shapeColour;
+            //ctx.fill();
+
+
+            // Speichere den aktuellen Kreis ab
+            circles.push({'x':x, 'y':y, 'r':r});
+        }
+
+        function hierarchyCircles(circle, highest) {
+            let cs = [];
+            for (c of circle) {
+                if (c.h <= highest) {
+                    cs.push(c);
+                }
+            }
+            return cs;
+        }
+
+        function randomElement(list) {
+            let pos = Math.floor(Math.random()*(list.length-1))
+            return list[pos];
+        }
+
+        function randomLastCircle(circles, elements) {
+            let amount = Math.min(elements, circles.length)
+            let pos = Math.floor((Math.random() * amount) + (circles.length - amount));
+            return circles[pos];
+        }
+
+        function distance(x1, y1, x2, y2) {
+            // Pythagoras
+            return Math.sqrt(((x2-x1)**2 + (y2-y1)**2))
+        }
+
+        function all_distances(x, y, r, circles) {
+            // Speichere alle Distanzen in einer Liste
+            distances = []
+            for (let circle of circles) {
+                let d = distance(x, y, circle.x, circle.y);
+                d -= circle.r;
+                distances.push(d);
+            }
+            return distances
+        }
+
+        function list_abs(list) {
+            abs = [];
+            for (let e of list) {abs.push(Math.abs(e));}
+            return abs;
+        }
+
+        function lerp(val, goal, amount) {
+            if (val < goal) {
+                if (val + amount > goal) {
+                    return goal;
+                }
+                else {
+                    return val + amount;
+                }
+            }
+            else {
+                if (val - amount < goal) {
+                    return goal;
+                }
+                else {
+                    return val - amount;
+                }
+            }
+        }
+        
+    </script>
+</body>
+
+</html>
