@@ -6,8 +6,11 @@
         Dein Browser unterstützt den HTML5 Canvas-Tag nicht (erscheint als Alternative auf dem Bildschirm</canvas>
     <script>
     	
+        // Die Hauptvariablen werden hier definiert
         let canvas = document.getElementById("canvas");
         let ctx = canvas.getContext("2d");
+
+        // Hier werden ALLE Kreise gespeichert, hauptsächlich für den Wachstumsalgorhitmus der Pflanze und die Kollision für die blauen Kreise
         let circles = [];
 
         let greens = [
@@ -28,72 +31,95 @@
             '#6600ff' // almost violet
         ]
         
+        // Dieser Wert habe ich nach langem Testen als gut empfunden, da er schöne Pflanzen generiert, die nicht zu sehr durcheinander sind
         let amount = 500;
         
-        r = 5;
+        // Das ist der Startkreis nach dem sich die anderen ausrichten
+        let r = 5;
         let x = 400;
         let y = 590;
 
+        // Wir speichern hier die Startposition, damit wir später daraufzurückgreifen können wenn wir einen neuen Stamm machen wollen
         let rootx = x;
         let rooty = y;
         let rootr = r;
 
-        // Starting circle
+        // Startkreis
         ctx.beginPath();
         ctx.arc(x, y, r, 0, 2 * Math.PI);
         ctx.strokeStyle = 'black';
         ctx.stroke();
         circles.push({'x':x, 'y':y, 'r':r, 'a':0, 'h':-1});
 
+
+        // zählt wie viel mal man es nicht geschafft hat einen Kreis zu platzieren
         let failed = 0;
 
+        // Die Distanz des letzten Kreises von der root
         let lastDistance = 0;
+        // Der Radius eines jeden Kreises
         let personalR = 5;
 
         for (i = 1; i <= amount; i = i + 1) {
 
+            // Bestimmt ob ein Kreis den Stamm oder Ast weiterwachsen lässt oder einen neuen Ast macht
             let type = Math.floor(Math.random()*100) + 1
 
+            // Der Kreis auf welchen sich der nächste Kreis bezieht, dieser "von dem er wächst"
             let friend = null;
+            // Der Winkel in welchem er wegwächst
             let angle = 0;
+
+            // Die Hierarchische Position des Kreises
+            // -1: Root
+            // 0: Teil des Hauptstammes
+            // 1: Ast weg vom Hauptstamm
+            // 2: Ast weg von 1
+            // ...
+            // 5: dünnster Ast
             let hierarchy = 0;
 
-            if (type < 98) {
-                hierarchy = 0;
+            if (type < 98) { // 2% ein Ast zu werden
+                // Wir nehmen den letzten Kreis, welcher eine oder mehrere Hierarchiestufen tiefer war (und somit dicker) und beziehen uns auf den
                 friend = randomLastCircle(
                     hierarchyCircles(circles, circles[circles.length-1].h), 1);
-                angle = friend.a // Math.random() * 2 * Math.PI
-                angle = lerp(angle, -Math.PI/2, 0.07)
-                angle += (Math.random()-0.5)/2*(1+(500-lastDistance)/300)
-                personalR = 5;
+                hierarchy = friend.h;
+                angle = friend.a
+                angle = lerp(angle, -Math.PI/2, 0.07) // geht ein bisschen nach oben, das zwingt die Äste grundsätzlich nach oben zu wachsen
+                angle += (Math.random()-0.5)/2*(1+(500-lastDistance)/300) // Varianz
                 
             } else {
-                friend = randomLastCircle(circles, 10);
-                console.log(friend);
-                hierarchy = friend.h + 1
-                if (hierarchy > 5) {continue;}
+                friend = randomLastCircle(circles, 10); // Wir nehmen irgendeinen der letzten 10 Kreise
+                hierarchy = friend.h + 1 // Es ist ein neuer Ast
+                if (hierarchy > 5) {continue;} // Wir wollen keine zu kleinen Äste
                 angle = friend.a
-                angle = lerp(angle, -Math.PI/2, 0.05)
-                if (Math.random() > 0.4) {
+                angle = lerp(angle, -Math.PI/2, 0.05) // Äste sind ein bisschen freier nicht so nach oben zu wachsen
+                if (Math.random() > 0.5) { // Eine Varianz weg vom Hauptast
                     angle += Math.PI/8
                 } else {
                     angle += Math.PI/8
                 }
-                angle += (Math.random()-0.5)*(1+(500-lastDistance)/300)
-                personalR = 5 - hierarchy;
+                angle += (Math.random()-0.5)*(1+(500-lastDistance)/300) // Varianz
             }
+            personalR = 5 - hierarchy*0.2; // Grösse nach Hierarchiestufe
             
+            // Erste Kondition: Failed geht hoch jedes Mal wenn das Platzieren nicht funktioniert
+            // Das Passiert vor allem am Rand
+            // Zweite Kondition: Zufällige Chance wieder neu anzufangen
             if (failed > 10 || Math.random()*1000 < 10 + hierarchy) {
+                // Zurück zum Anfang
                 x = rootx;
                 y = rooty;
             }
             else {
+                // Setzte an den vorherigen Kreis an
                 x = friend.x;
                 y = friend.y;
                 x += Math.cos(angle) * (friend.r + personalR)
                 y += Math.sin(angle) * (friend.r + personalR)
             }
-        
+            
+            // Testet ob man am Rand angekommen ist
             if (x > 800 || x < 0 || y > 600 || y < 0) {
                 failed += 1;
                 i -= 1;
@@ -103,9 +129,11 @@
                 failed = 0;
             }
 
+            // Zeichnet den Kreis
             ctx.beginPath();
             ctx.arc(x, y, personalR, 0, 2 * Math.PI);
 
+            // Chance eine "Frucht" zu generieren
             if (Math.random()*1000 < (1050 - lastDistance/5)) {
                 ctx.strokeStyle = randomElement(greens);
                 ctx.stroke();
@@ -115,14 +143,16 @@
                 ctx.fill();
             }
     
-
             lastDistance = distance(rootx, rooty, x, y);
 
             // Speichere den aktuellen Kreis ab
             circles.push({'x':x, 'y':y, 'r':personalR, 'a':angle, 'h':hierarchy});
         }
+
+
+        // Jetzt kommt der Hintergrund
         amount = 2000;
-        r = 10;
+        r = 10; // Maximale Grösse die die Kreise erreichen werden
  
         for (i = 1; i <= amount; i = i + 1) {
             let x = Math.floor((Math.random() * 800) + 1);
@@ -137,7 +167,6 @@
 
             // Es wird erst aus der Schleife gegangen wenn entweder
             // A: Ein Kreis platziert werden kann, ohne mit einem anderen Kreis zu überlappen
-            // NEU: Kreise dürfen jetzt auch ineinander solange sie sich nicht schneiden
             // oder B: Es 100 mal versucht wurde
             while (!(minDistance > r*1 || i > 100)) {
                 x = Math.floor((Math.random() * 800) + 1);
@@ -154,21 +183,17 @@
                 else {continue;} // Wir haben keine Position gefunden einen Kreis zu platzieren, also platzieren wir auch keinen und gehen zur nächsten Iteration der Schleife
             }
 
-            
-            //hier wird das Bildelement gezeichnet und mit der Farbe gefüllt
+            //hier wird der Kreis gezeichnet und mit der Farbe gefüllt
             ctx.beginPath();
             ctx.arc(x, y, r, 0, 2 * Math.PI);
             ctx.strokeStyle = randomElement(blues);
             ctx.stroke();
-            
-            //ctx.fillStyle = shapeColour;
-            //ctx.fill();
-
 
             // Speichere den aktuellen Kreis ab
             circles.push({'x':x, 'y':y, 'r':r});
         }
 
+        // Gibt einen Kreis aus der Liste ab, welcher maximal die Hierarchiestufe "highest" hat
         function hierarchyCircles(circle, highest) {
             let cs = [];
             for (c of circle) {
@@ -179,11 +204,12 @@
             return cs;
         }
 
+        // Selbsterlärkend
         function randomElement(list) {
             let pos = Math.floor(Math.random()*(list.length-1))
             return list[pos];
         }
-
+        // Wählt zufällig einen der letzten N Kreise, passt sich automatisch an die Grösse der Kreisliste an
         function randomLastCircle(circles, elements) {
             let amount = Math.min(elements, circles.length)
             let pos = Math.floor((Math.random() * amount) + (circles.length - amount));
@@ -206,12 +232,15 @@
             return distances
         }
 
+        // Generiert den Betrag einer Liste
         function list_abs(list) {
             abs = [];
             for (let e of list) {abs.push(Math.abs(e));}
             return abs;
         }
 
+        // Traditionelle lerp Funktion
+        // Bewegt sich um Wert X in die Richtung des Zielwertes
         function lerp(val, goal, amount) {
             if (val < goal) {
                 if (val + amount > goal) {
